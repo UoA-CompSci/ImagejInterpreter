@@ -214,20 +214,6 @@ public class Interpreter implements MacroConstants {
 			doStatement();
 	}
         
-        //habib
-        // returns true, if the called function is allowed to be called in batch mode.
-        boolean isAllowed(int type) {
-            switch(type) {
-                case GET_PIXEL:
-                case SET_PIXEL:
-                case PUT_PIXEL:
-                case PRINT:
-                    return true;
-                default:
-                    return false;
-            }
-        }
-
 	final void doStatement() {
 		getToken();
 		if (debugMode!=Debugger.NOT_DEBUGGING && debugger!=null && !done && token!=';' && token!=FUNCTION)
@@ -237,11 +223,11 @@ public class Interpreter implements MacroConstants {
 				doVar();
 				break;
 			case PREDEFINED_FUNCTION:
-                                // habib: call predefined function pnly if it is allowed to be called.
-                                if (isAllowed(pgm.table[tokenAddress].type))
+                                // habib: call predefined function only if it is allowed to be called.
+                                if (headless.checkPredefined(pgm.table[tokenAddress].type))
                                     func.doFunction(pgm.table[tokenAddress].type);
                                 else
-                                    throw new RuntimeException(tokenString+" is not available in headless version of ImageJ interpreter.");
+                                    headless.error(tokenString+" is not available in headless version of ImageJ interpreter.");
 				break;
 			case USER_FUNCTION:
 				runUserFunction();
@@ -1205,7 +1191,7 @@ public class Interpreter implements MacroConstants {
             String errorMessage = title + ":" + msg;
             for (int i = 0; i < variables.length; i++)
                 errorMessage += variables[i] + ",";
-            throw new RuntimeException(errorMessage);
+            headless.error(errorMessage);
             /* 
 		GenericDialog gd = new GenericDialog(title);
 		gd.setInsets(6,5,0);
@@ -1300,14 +1286,18 @@ public class Interpreter implements MacroConstants {
 	}
 
 	final String getStringTerm() {
-		String str;
+		String str="";
 		getToken();
 		switch (token) {
 		case STRING_CONSTANT:
 			str = tokenString;
 			break;
 		case STRING_FUNCTION:
-			str = func.getStringFunction(pgm.table[tokenAddress].type);
+                        // habib: call function only if it is allowed to be called.
+                        if (headless.checkGetString(pgm.table[tokenAddress].type))
+                            str = func.getStringFunction(pgm.table[tokenAddress].type);
+                        else
+                            headless.error(tokenString+" is not available in headless version of ImageJ interpreter.");                   
 			break;
 		case USER_FUNCTION:
 			Variable v = runUserFunction();
