@@ -604,8 +604,10 @@ public class IJ {
 		error(null, msg);
 		if (Thread.currentThread().getName().endsWith("JavaScript"))
 			throw new RuntimeException(Macro.MACRO_CANCELED);
-		else
+                else {
 			Macro.abort();
+                        throw new RuntimeException(Macro.MACRO_CANCELED);
+                }
 	}
 	
 	/**Displays a message in a dialog box with the specified title.
@@ -626,6 +628,7 @@ public class IJ {
 		redirectErrorMessages = false;
 		if (abortMacro)
 			Macro.abort();
+                throw new RuntimeException(title2+":"+msg);
 	}
 
 	/** 
