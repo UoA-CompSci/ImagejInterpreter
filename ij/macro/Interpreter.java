@@ -1191,7 +1191,7 @@ public class Interpreter implements MacroConstants {
             String errorMessage = title + ":" + msg;
             for (int i = 0; i < variables.length; i++)
                 errorMessage += variables[i] + ",";
-            headless.error(errorMessage);
+            throw new RuntimeException(errorMessage);
             /* 
 		GenericDialog gd = new GenericDialog(title);
 		gd.setInsets(6,5,0);
