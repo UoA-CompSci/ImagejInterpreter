@@ -240,6 +240,8 @@ public class Interpreter implements MacroConstants {
                                 // habib: call predefined function pnly if it is allowed to be called.
                                 if (isAllowed(pgm.table[tokenAddress].type))
                                     func.doFunction(pgm.table[tokenAddress].type);
+                                else
+                                    throw new RuntimeException(tokenString+" is not available in headless version of ImageJ interpreter.");
 				break;
 			case USER_FUNCTION:
 				runUserFunction();
