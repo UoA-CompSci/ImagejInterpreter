@@ -227,7 +227,7 @@ public class Interpreter implements MacroConstants {
                                 if (Headless.checkPredefined(pgm.table[tokenAddress].type))
                                     func.doFunction(pgm.table[tokenAddress].type);
                                 else
-                                    Headless.error(tokenString+" is not available in headless version of ImageJ interpreter.");
+                                    Headless.error(tokenString+ " [line "+pgm.lineNumbers[pc]+ "]"+" is not available.");
 				break;
 			case USER_FUNCTION:
 				runUserFunction();
@@ -1295,7 +1295,7 @@ public class Interpreter implements MacroConstants {
                         if (Headless.checkGetString(pgm.table[tokenAddress].type))
                             str = func.getStringFunction(pgm.table[tokenAddress].type);
                         else
-                            Headless.error(tokenString+" is not available in headless version of ImageJ interpreter.");                   
+                            Headless.error(tokenString+ " [line "+pgm.lineNumbers[pc]+ "]"+" is not available.");                   
 			break;
 		case USER_FUNCTION:
 			Variable v = runUserFunction();
