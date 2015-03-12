@@ -224,10 +224,10 @@ public class Interpreter implements MacroConstants {
 				break;
 			case PREDEFINED_FUNCTION:
                                 // habib: call predefined function only if it is allowed to be called.
-                                if (headless.checkPredefined(pgm.table[tokenAddress].type))
+                                if (Headless.checkPredefined(pgm.table[tokenAddress].type))
                                     func.doFunction(pgm.table[tokenAddress].type);
                                 else
-                                    headless.error(tokenString+" is not available in headless version of ImageJ interpreter.");
+                                    Headless.error(tokenString+" is not available in headless version of ImageJ interpreter.");
 				break;
 			case USER_FUNCTION:
 				runUserFunction();
@@ -1184,9 +1184,7 @@ public class Interpreter implements MacroConstants {
 		done = true;
 	}
 	
-	void showError(String title, String msg, String[] variables) {
-                
-            // habib
+	void showError(String title, String msg, String[] variables) {                
             // generate exception instead of creating a dialog.
             String errorMessage = title + ":" + msg;
             for (int i = 0; i < variables.length; i++)
@@ -1293,11 +1291,11 @@ public class Interpreter implements MacroConstants {
 			str = tokenString;
 			break;
 		case STRING_FUNCTION:
-                        // habib: call function only if it is allowed to be called.
-                        if (headless.checkGetString(pgm.table[tokenAddress].type))
+                        // call function only if it is allowed to be called.
+                        if (Headless.checkGetString(pgm.table[tokenAddress].type))
                             str = func.getStringFunction(pgm.table[tokenAddress].type);
                         else
-                            headless.error(tokenString+" is not available in headless version of ImageJ interpreter.");                   
+                            Headless.error(tokenString+" is not available in headless version of ImageJ interpreter.");                   
 			break;
 		case USER_FUNCTION:
 			Variable v = runUserFunction();
