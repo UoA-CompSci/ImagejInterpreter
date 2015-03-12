@@ -15,7 +15,7 @@ import static ij.macro.MacroConstants.SET_PIXEL;
  *
  * @author hnad002
  */
-public class headless {
+public class Headless {
         // returns true, if the called function is allowed to be called in batch mode.
         static boolean checkPredefined(int type) {
             switch(type) {
