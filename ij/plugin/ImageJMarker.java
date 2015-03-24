@@ -2,12 +2,16 @@ package ij.plugin;
 
 import ij.ImagePlus;
 import ij.io.Opener;
+import ij.io.FileSaver;
 import ij.macro.Interpreter;
+import ij.process.ImageProcessor;
 
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.StringReader;
+import java.lang.Exception;
+import java.util.Scanner;
 
 /**
  * Created by Alexandr Shirokov on 11/03/2015.
@@ -23,6 +27,58 @@ public class ImageJMarker implements PlugIn
     private static final int COMMENT_ONE = 2;
     private static final int COMMENT_TWO = 3;
     private static final int COMMENT_TWO_END = 4;
+
+    private static final String IMAGES_PATH = "/tmp/images/";
+
+    public static void main(String[] args) {
+        Scanner s = null;
+        try {
+            s = new Scanner(System.in);
+            String source = s.next();
+            String script = readFile(args[0]);
+            ImagePlus res = runScript(script, IMAGES_PATH + source);
+            switch (source){
+                case "source_q1.tiff":
+                    performAverageImageCompare(IMAGES_PATH + "target_q1.tiff", res);
+                    break;
+                case "source_q2.tiff":
+                    performImageCompare(IMAGES_PATH + "target_q2.tiff", res, 5, 2, 0);
+                    performBorderCheck(IMAGES_PATH + "target_q2.tiff", res, 2, 0);
+                    break;
+                case "source_q3a.tiff":
+                    convert(res,65535,0);
+                    performCommentCheck(script, 2);//TODO check perfomance
+                    performBinaryImageCompare(IMAGES_PATH + "target_q3a.tiff", res, 0, 0);
+                    break;
+                case "source_q3b.tiff":
+                    performCommentCheck(script, 3);//TODO check perfomance
+                    performImageCompare(IMAGES_PATH + "target_q3b.tiff", res, 3, 5, 5);
+                    break;
+                case "source_q3c.tiff":
+                    convert(res,0,65535);
+                    performBinaryImageCompare(IMAGES_PATH + "target_q3c.tiff", res, 5, 5);
+                    break;
+                case "source_q4.tiff":
+                    convert(res,0,255);
+                    performCommentCheck(script, 5);//TODO check perfomance
+                    performBorderCheck(IMAGES_PATH + "target_q4.tiff", res, 1, 1);
+                    performBinaryImageCompare(IMAGES_PATH + "target_q4.tiff", res, 5, 5);
+                    break;
+                case "source_q42.tiff":
+                    convert(res,0,65535);
+                    performBinaryImageCompare(IMAGES_PATH + "target_q42.tiff", res, 5, 5);
+                    break;
+                default:
+                    break;
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            if (s != null) {
+                s.close();
+            }
+        }
+    }
 
     public void run(String arg) {
 
@@ -42,15 +98,7 @@ public class ImageJMarker implements PlugIn
 
         //Headless/GUI-less version
         Interpreter interpreter = new Interpreter();
-        String macroScript = sanitize(macro);
-
-        return interpreter.runBatchMacro(macroScript, sourceImage);
-    }
-
-    private static String sanitize(String macro)
-    {
-        String fileData = macro.replaceAll("print(.*);", ";");
-        return fileData.replaceAll("Dialog.*;", ";");
+        return interpreter.runBatchMacro(macro, sourceImage);
     }
 
     /**
@@ -65,20 +113,14 @@ public class ImageJMarker implements PlugIn
      * @param xpad The padding in the x direction
      * @param ypad The padding in the y direction
      */
-    public static void performImageCompare(String destinationImagePath, ImagePlus sourceImage, int maxMarks, int level1Mark, int level2Mark, int level1Thresh, int level2Thresh, int xpad, int ypad)
+    public static void performImageCompare(String destinationImagePath, ImagePlus sourceImage, int thresh, int xpad, int ypad)
     {
         ImagePlus targetImage = new ImagePlus(destinationImagePath);
         int difference = getMaxDifference(sourceImage, targetImage, xpad, ypad);
-        if (difference <= 1) {
-            System.out.print(maxMarks);
-        } else if (difference <= level1Thresh) {
-            System.out.print(level1Mark);
-            //String comment = String.format("Score %s marks if the maximum error is between 1 and %s.", level1Mark, level1Thresh);
-        } else if (difference <= level2Thresh) {
-            System.out.print(level2Mark);
-            //String comment = String.format("Score %s marks if the maximum error is between %s and %s.", level2Mark, level1Thresh, level2Thresh);
+        if (difference <= thresh) {
+            System.out.print(difference);
         } else {
-            System.out.print(String.format("Exceeded maximum allowed difference of +/- %s [actual difference found: %s].", level2Thresh, difference));
+            System.out.print(String.format("Exceeded maximum allowed difference of +/- %s [actual difference found: %s].", thresh, difference));
         }
     }
 
@@ -88,17 +130,12 @@ public class ImageJMarker implements PlugIn
      * @param sourceImage The source image
      * @param maxMarks The maximum marks that this question is worth
      */
-    public static void performAverageImageCompare(String destinationImagePath, ImagePlus sourceImage, int maxMarks)
+    public static void performAverageImageCompare(String destinationImagePath, ImagePlus sourceImage)
     {
         ImagePlus targetImage = new ImagePlus(destinationImagePath);
         int difference = getAverageDifference(sourceImage, targetImage);
-        if (difference <= 1) {
-            System.out.print(maxMarks);
-        } else if (difference <= 2) {
-            System.out.print(maxMarks / 2);
-            //mark.setComment("Half mark if the maximum error is between 1 and 2.");
-        } else if (difference <= 32) {
-            System.out.print(maxMarks / 5);
+        if (difference <= 32) {
+            System.out.print(difference);
             //mark.setComment("A fifth mark if the maximum error is between 2 and 32.");
         } else {
             System.out.print(String.format("Exceeded maximum allowed difference of +/- 32 [actual difference found: %s].", difference));
@@ -114,15 +151,12 @@ public class ImageJMarker implements PlugIn
      * @param xpad The x padding
      * @param ypad The y padding
      */
-    public static void performBinaryImageCompare(String destinationImagePath, ImagePlus sourceImage, int maxMarks, int xpad, int ypad)
+    public static void performBinaryImageCompare(String destinationImagePath, ImagePlus sourceImage, int xpad, int ypad)
     {
         ImagePlus targetImage = new ImagePlus(destinationImagePath);
         int difference = getDifferenceCount(sourceImage, targetImage, xpad, ypad);
-        if (difference <= 10) {
-            System.out.print(maxMarks);
-        } else if (difference <= 50) {
-            System.out.print(maxMarks / 2);
-            //mark.setComment("Half mark if the difference is between 10 and 50 mismatches.");
+        if (difference <= 50) {
+            System.out.print(difference);
         } else {
             System.out.print(String.format("Exceeded maximum allowed difference of 50 mismatches [actual difference found: %s].", difference));
         }
@@ -136,13 +170,11 @@ public class ImageJMarker implements PlugIn
      * @param xSize The size of the border in the x direction
      * @param ySize The size of the border in the y direction
      */
-    public static void performBorderCheck(String destinationImagePath, ImagePlus sourceImage, int maxMarks, int xSize, int ySize)
+    public static void performBorderCheck(String destinationImagePath, ImagePlus sourceImage, int xSize, int ySize)
     {
         ImagePlus targetImage = new ImagePlus(destinationImagePath);
         boolean sameBorders = doBordersMatch(sourceImage, targetImage, xSize, ySize);
-        if (sameBorders) {
-            System.out.print(maxMarks);
-        } else {
+        if (!sameBorders) {
             System.out.print("The border should not change, but changes were detected!");
         }
     }
@@ -166,6 +198,134 @@ public class ImageJMarker implements PlugIn
     //----------------------------------------------
     // Helper Methods
     //----------------------------------------------
+    //----------------------------------------------
+    // Convert a binary image into a consistent form
+    //----------------------------------------------
+
+    /**
+     * Convert an image into a binary image
+     * @param image The image that we are converting
+     * @param maxColor The maximum color
+     * @param minColor The minimum color
+     */
+    private static void convert(ImagePlus image, int maxColor, int minColor)
+    {
+        int[] histogram = createHistogram(image);
+        int minValue = getMinimum(histogram);
+        int maxValue = getMaximum(histogram);
+        remap(image,minValue, maxValue, minColor, maxColor);
+    }
+
+    //----------------------------------------------
+    // Utility Methods
+    //----------------------------------------------
+
+    /**
+     * Generate a histogram
+     * @param image The image that we are converting
+     * @return The histogram as a histogram
+     */
+    private static int[] createHistogram(ImagePlus image)
+    {
+        int intensityMax = (int)Math.pow(2, image.getBitDepth());
+        int[] histogram = new int[intensityMax];
+        for (int y=0; y<image.getHeight(); y++)
+        {
+            for (int x=0; x<image.getWidth(); x++)
+            {
+                int intensity = image.getPixel(x, y)[0];
+                histogram[intensity]++;
+            }
+        }
+        return histogram;
+    }
+
+    /**
+     * Retrieve the minimum value from the histogram
+     * @param histogram The histogram that we are getting the value from
+     * @return The resultant minimum image
+     */
+    private static int getMinimum(int[] histogram)
+    {
+        int minOccurances = 100000000;
+        int minValue = 0;
+        for (int i=0; i<histogram.length; i++)
+        {
+            int occurances = histogram[i];
+            if (occurances == 0) continue;
+            if (occurances < minOccurances)
+            {
+                minOccurances = occurances;
+                minValue = i;
+            }
+        }
+        return minValue;
+    }
+
+    /**
+     * Retrieve the maximum value from the histogram
+     * @param histogram The histogram that we are getting the values for
+     * @return The resultant maximum image
+     */
+    private static int getMaximum(int[] histogram)
+    {
+        int maxOccurances = 0;
+        int maxValue = 0;
+        for (int i=0; i<histogram.length; i++)
+        {
+            int occurances = histogram[i];
+            if (occurances == 0) continue;
+            if (occurances > maxOccurances)
+            {
+                maxOccurances = occurances;
+                maxValue = i;
+            }
+        }
+        return maxValue;
+    }
+
+    /**
+     * Remap an intensity on the image
+     * @param image The image that we are remapping
+     * @param oldValue The value that is getting replaced
+     * @param newValue The new value
+     */
+    private static void remap(ImagePlus image, int oldMinValue, int oldMaxValue, int newMinValue, int newMaxValue)
+    {
+        ImageProcessor processor = image.getProcessor();
+        for (int y=0; y<image.getHeight(); y++)
+        {
+            for (int x=0; x<image.getWidth(); x++)
+            {
+                int intensity = image.getPixel(x, y)[0];
+                if (intensity == oldMinValue)
+                {
+                    processor.putPixel(x, y, newMinValue);
+                }
+                else if (intensity == oldMaxValue)
+                {
+                    processor.putPixel(x, y, newMaxValue);
+                }
+            }
+        }
+    }
+
+    private static String readFile(String pathname) throws Exception {
+
+        File file = new File(pathname);
+        StringBuilder fileContents = new StringBuilder((int)file.length());
+        Scanner scanner = new Scanner(file);
+        String lineSeparator = System.getProperty("line.separator");
+
+        try {
+            while(scanner.hasNextLine()) {
+                fileContents.append(scanner.nextLine() + lineSeparator);
+            }
+            return fileContents.toString();
+        } finally {
+            scanner.close();
+        }
+    }
 
     /**
      * Count the comments that are in the file
