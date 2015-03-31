@@ -11,6 +11,7 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.StringReader;
 import java.lang.Exception;
+import java.lang.Integer;
 import java.util.Scanner;
 
 /**
@@ -347,7 +348,17 @@ public class ImageJMarker implements PlugIn
                 switch (state)
                 {
                     case INITIAL: state = processInitial(value, state); break;
-                    case COMMENT_START: state = processCommentStart(value, counter); break;
+                    case COMMENT_START: {
+                        //state = processCommentStart(value, counter);
+                        char character = (char) value;
+                        if (character == '/') {
+                            counter++;
+                            state = COMMENT_ONE;
+                        } else if (character == '*') {
+                            counter++;
+                            state = COMMENT_TWO;
+                        } else state = INITIAL;
+                    } break;
                     case COMMENT_ONE: state = processCommentOne(value, state); break;
                     case COMMENT_TWO: state = processCommentTwo(value, state); break;
                     case COMMENT_TWO_END: state = processCommentEnd(value, state); break;
@@ -371,22 +382,6 @@ public class ImageJMarker implements PlugIn
         char character = (char) value;
         if (character == '/') return COMMENT_START;
         return state;
-    }
-
-    /**
-     * Process the comment start state
-     * @param value The next value to be read in
-     */
-    private static int processCommentStart(int value, int counter)
-    {
-        char character = (char) value;
-        if (character == '/') {
-            counter++;
-            return COMMENT_ONE;
-        } else if (character == '*') {
-            counter++;
-            return COMMENT_TWO;
-        } else return INITIAL;
     }
 
     /**
