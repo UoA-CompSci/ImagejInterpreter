@@ -29,7 +29,7 @@ public class ImageJMarker implements PlugIn
     private static final int COMMENT_TWO = 3;
     private static final int COMMENT_TWO_END = 4;
 
-    private static final String IMAGES_PATH = "/tmp/images/";
+    private static final String IMAGES_PATH = "/var/www/html/moodle/local/CodeRunner/coderunner/images/";
 
     public static void main(String[] args) {
         Scanner s = null;

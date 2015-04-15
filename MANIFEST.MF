@@ -1,2 +1,2 @@
-Main-Class: ij.ImageJ
+Main-Class: ij.plugin.ImageJMarker
 
